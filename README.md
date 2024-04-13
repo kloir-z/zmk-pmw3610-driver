@@ -27,14 +27,14 @@ manifest:
     path: config
 ```
 
-Then, edit your `build.yml` to look like this:
+Then, edit your `build.yml` to look like this, 3.5 is now on main:
 
 ```yml
 on: [workflow_dispatch]
 
 jobs:
   build:
-    uses: petejohanson/zmk/.github/workflows/build-user-config.yml@core/zephyr-3.5-update
+    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
 ```
 
 Now, update your `board.overlay` adding the necessary bits (update the pins for your board accordingly):
@@ -79,6 +79,14 @@ Now, update your `board.overlay` adding the necessary bits (update the pins for 
         // scroll-layers = <2 3>;
         // automouse-layer = <4>;
     };
+};
+
+/ {
+  trackball_listener {
+    compatible = "zmk,input-listener";
+    device = <&trackball>;
+
+  };
 };
 ```
 
