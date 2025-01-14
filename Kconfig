@@ -159,6 +159,14 @@ config PMW3610_AUTOMOUSE_TIMEOUT_MS
   int "Amount of milliseconds the mouse layer will be active after using the trackball"
   default 400
 
+config PMW3610_MOVEMENT_THRESHOLD
+    int "Movement threshold for automatic mouse layer activation"
+    default 5
+    help
+        The threshold for trackball movement that triggers the automatic mouse layer.
+        A higher value means more movement is required to activate the mouse layer.
+        This helps prevent accidental activation during typing.
+
 module = PMW3610
 module-str = PMW3610
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
