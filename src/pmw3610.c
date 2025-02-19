@@ -702,18 +702,50 @@ static int pmw3610_report_data(const struct device *dev) {
             input_report_rel(dev, INPUT_REL_X, x, false, K_FOREVER);
             input_report_rel(dev, INPUT_REL_Y, y, true, K_FOREVER);
         } else {
-            data->scroll_delta_x += x;
-            data->scroll_delta_y += y;
+            int32_t movement = abs(x) + abs(y);
+            int32_t accel_x = x;
+            int32_t accel_y = y;
+            
+            #ifdef CONFIG_PMW3610_SCROLL_ACCELERATION
+                // 現在時刻を取得
+                int64_t current_time = k_uptime_get();
+                int64_t delta_time = data->last_scroll_time > 0 ? 
+                                    current_time - data->last_scroll_time : 0;
+                
+                // 速度を計算（有効な時間差がある場合のみ）
+                if (delta_time > 0 && delta_time < 100) {  // 100ms以上経過したら速度計算をリセット
+                    float speed = (float)movement / delta_time;
+                    
+                    // 曲線的な加速係数を計算
+                    // シグモイド関数を使用した加速曲線
+                    float base_sensitivity = (float)CONFIG_PMW3610_SCROLL_SENSITIVITY / 5.0f;
+                    float acceleration = 1.0f + 4.0f * (1.0f / (1.0f + expf(-0.2f * (speed - 10.0f))));
+                    
+                    // 感度設定を反映
+                    acceleration *= base_sensitivity;
+                    
+                    // 加速係数を適用
+                    accel_x = (int32_t)(x * acceleration);
+                    accel_y = (int32_t)(y * acceleration);
+                }
+                
+                // 時間と移動量を記録
+                data->last_scroll_time = current_time;
+            #endif
+
+            data->scroll_delta_x += accel_x;
+            data->scroll_delta_y += accel_y;
+                    
             if (abs(data->scroll_delta_y) > CONFIG_PMW3610_SCROLL_TICK) {
                 input_report_rel(dev, INPUT_REL_WHEEL,
-                                 data->scroll_delta_y > 0 ? PMW3610_SCROLL_Y_NEGATIVE : PMW3610_SCROLL_Y_POSITIVE,
-                                 true, K_FOREVER);
+                            data->scroll_delta_y > 0 ? PMW3610_SCROLL_Y_NEGATIVE : PMW3610_SCROLL_Y_POSITIVE,
+                            true, K_FOREVER);
                 data->scroll_delta_x = 0;
                 data->scroll_delta_y = 0;
             } else if (abs(data->scroll_delta_x) > CONFIG_PMW3610_SCROLL_TICK) {
                 input_report_rel(dev, INPUT_REL_HWHEEL,
-                                 data->scroll_delta_x > 0 ? PMW3610_SCROLL_X_NEGATIVE : PMW3610_SCROLL_X_POSITIVE,
-                                 true, K_FOREVER);
+                            data->scroll_delta_x > 0 ? PMW3610_SCROLL_X_NEGATIVE : PMW3610_SCROLL_X_POSITIVE,
+                            true, K_FOREVER);
                 data->scroll_delta_x = 0;
                 data->scroll_delta_y = 0;
             }

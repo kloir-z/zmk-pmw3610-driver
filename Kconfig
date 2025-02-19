@@ -167,6 +167,19 @@ config PMW3610_MOVEMENT_THRESHOLD
         A higher value means more movement is required to activate the mouse layer.
         This helps prevent accidental activation during typing.
 
+config PMW3610_SCROLL_ACCELERATION
+    bool "Enable scroll acceleration"
+    default y
+    help
+      Enable acceleration for scrolling based on movement speed.
+
+config PMW3610_SCROLL_SENSITIVITY
+    int "Scroll sensitivity (1-10)"
+    default 5
+    range 1 10
+    help
+      Scrolling sensitivity. Higher values make scrolling more responsive.
+
 module = PMW3610
 module-str = PMW3610
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
