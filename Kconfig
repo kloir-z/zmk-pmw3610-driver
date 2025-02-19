@@ -167,6 +167,12 @@ config PMW3610_MOVEMENT_THRESHOLD
         A higher value means more movement is required to activate the mouse layer.
         This helps prevent accidental activation during typing.
 
+config PMW3610_SCROLL_DIVIDOR
+    int "Divisor for scroll mode sensitivity"
+    default 6
+    help
+      Higher values make scrolling less sensitive
+
 module = PMW3610
 module-str = PMW3610
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
