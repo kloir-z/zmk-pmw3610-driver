@@ -707,7 +707,6 @@ static int pmw3610_report_data(const struct device *dev) {
             int32_t accel_y = y;
             
             #ifdef CONFIG_PMW3610_SCROLL_ACCELERATION
-                // 現在時刻を取得
                 int64_t current_time = k_uptime_get();
                 int64_t delta_time = data->last_scroll_time > 0 ? 
                                     current_time - data->last_scroll_time : 0;
@@ -716,10 +715,11 @@ static int pmw3610_report_data(const struct device *dev) {
                 if (delta_time > 0 && delta_time < 100) {  // 100ms以上経過したら速度計算をリセット
                     float speed = (float)movement / delta_time;
                     
-                    // 曲線的な加速係数を計算
-                    // シグモイド関数を使用した加速曲線
-                    float base_sensitivity = (float)CONFIG_PMW3610_SCROLL_SENSITIVITY / 5.0f;
-                    float acceleration = 1.0f + 4.0f * (1.0f / (1.0f + expf(-0.2f * (speed - 10.0f))));
+                    // より積極的なシグモイド関数を使用した加速曲線
+                    float base_sensitivity = (float)CONFIG_PMW3610_SCROLL_SENSITIVITY / 2.5f;
+                    
+                    // より大きな加速効果（最大10倍まで）
+                    float acceleration = 1.0f + 9.0f * (1.0f / (1.0f + expf(-0.5f * (speed - 8.0f))));
                     
                     // 感度設定を反映
                     acceleration *= base_sensitivity;
@@ -727,6 +727,10 @@ static int pmw3610_report_data(const struct device *dev) {
                     // 加速係数を適用
                     accel_x = (int32_t)(x * acceleration);
                     accel_y = (int32_t)(y * acceleration);
+                    
+                    // 小さな動きは維持するが、大きな動きは加速する
+                    if (abs(x) <= 1) accel_x = x;
+                    if (abs(y) <= 1) accel_y = y;
                 }
                 
                 // 時間と移動量を記録

@@ -177,8 +177,9 @@ config PMW3610_SCROLL_SENSITIVITY
     int "Scroll sensitivity (1-10)"
     default 5
     range 1 10
+    depends on PMW3610_SCROLL_ACCELERATION
     help
-      Scrolling sensitivity. Higher values make scrolling more responsive.
+      Scrolling sensitivity. Higher values make scrolling more responsive with stronger acceleration.
 
 module = PMW3610
 module-str = PMW3610
