@@ -52,6 +52,8 @@ struct pixart_data {
 
     // for pmw3610 smart algorithm
     bool sw_smart_flag;
+
+    int64_t last_remainder_time;
 };
 
 // device config data structure

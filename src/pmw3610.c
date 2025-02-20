@@ -612,18 +612,6 @@ static int pmw3610_report_data(const struct device *dev) {
 
     data->curr_mode = input_mode;
 
-    int16_t x;
-    int16_t y;
-
-#if AUTOMOUSE_LAYER > 0
-    if (input_mode == MOVE &&
-        (automouse_triggered || zmk_keymap_highest_layer_active() != AUTOMOUSE_LAYER) &&
-        (abs(x) + abs(y) > CONFIG_PMW3610_MOVEMENT_THRESHOLD)
-) {
-    activate_automouse_layer();
-}
-#endif
-
     int err = motion_burst_read(dev, buf, sizeof(buf));
     if (err) {
         return err;
@@ -634,6 +622,7 @@ static int pmw3610_report_data(const struct device *dev) {
     int16_t raw_y =
         TOINT16((buf[PMW3610_Y_L_POS] + ((buf[PMW3610_XY_H_POS] & 0x0F) << 8)), 12) / dividor;
 
+    int16_t x, y;
     if (IS_ENABLED(CONFIG_PMW3610_ORIENTATION_0)) {
         x = -raw_x;
         y = raw_y;
@@ -654,6 +643,18 @@ static int pmw3610_report_data(const struct device *dev) {
 
     if (IS_ENABLED(CONFIG_PMW3610_INVERT_Y)) {
         y = -y;
+    }
+
+    // 残り値の減衰処理
+    int64_t current_time = k_uptime_get();
+    if (data->last_remainder_time > 0) {
+        int64_t elapsed = current_time - data->last_remainder_time;
+        // 100ms経過で残り値をリセット
+        if (elapsed > 100) {
+            data->scroll_delta_x = 0;
+            data->scroll_delta_y = 0;
+            data->last_remainder_time = 0;
+        } 
     }
 
 #ifdef CONFIG_PMW3610_SMART_ALGORITHM
@@ -741,35 +742,47 @@ static int pmw3610_report_data(const struct device *dev) {
             data->scroll_delta_y += accel_y;
                     
             if (abs(data->scroll_delta_y) > CONFIG_PMW3610_SCROLL_TICK) {
-                // イベント数を制限して安全に処理
+                // イベント数制限
                 int event_count = abs(data->scroll_delta_y) / CONFIG_PMW3610_SCROLL_TICK;
-                // 最大イベント数を制限（例：一度に最大10イベントまで）
                 const int MAX_EVENTS = 10;
                 if (event_count > MAX_EVENTS) {
                     event_count = MAX_EVENTS;
-                    // 余りは大きな値になるので、次回も多めにスクロールするように調整
-                    data->scroll_delta_y = data->scroll_delta_y - (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
+                    // 制限された残りの値を保持
+                    if (data->scroll_delta_y > 0) {
+                        data->scroll_delta_y -= (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
+                    } else {
+                        data->scroll_delta_y += (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
+                    }
+                    // 残り値の時間を記録
+                    data->last_remainder_time = k_uptime_get();
                 } else {
                     // 通常通り余りを計算
                     data->scroll_delta_y = data->scroll_delta_y % CONFIG_PMW3610_SCROLL_TICK;
                 }
                 
-                // 制限されたイベント数で処理
                 for (int i = 0; i < event_count; i++) {
                     input_report_rel(dev, INPUT_REL_WHEEL,
                                 data->scroll_delta_y > 0 ? PMW3610_SCROLL_Y_NEGATIVE : PMW3610_SCROLL_Y_POSITIVE,
-                                (i == event_count - 1), // 最後のイベントだけtrueにする
-                                K_MSEC(10)); // タイムアウトを設定
+                                (i == event_count - 1),
+                                K_MSEC(10));
                 }
                 data->scroll_delta_x = 0;
             } else if (abs(data->scroll_delta_x) > CONFIG_PMW3610_SCROLL_TICK) {
-                // 水平スクロールも同様の制限を適用
+                // イベント数制限
                 int event_count = abs(data->scroll_delta_x) / CONFIG_PMW3610_SCROLL_TICK;
                 const int MAX_EVENTS = 10;
                 if (event_count > MAX_EVENTS) {
                     event_count = MAX_EVENTS;
-                    data->scroll_delta_x = data->scroll_delta_x - (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
+                    // 制限された残りの値を保持
+                    if (data->scroll_delta_x > 0) {
+                        data->scroll_delta_x -= (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
+                    } else {
+                        data->scroll_delta_x += (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
+                    }
+                    // 残り値の時間を記録
+                    data->last_remainder_time = k_uptime_get();
                 } else {
+                    // 通常通り余りを計算
                     data->scroll_delta_x = data->scroll_delta_x % CONFIG_PMW3610_SCROLL_TICK;
                 }
                 
