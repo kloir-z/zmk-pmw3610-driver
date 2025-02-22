@@ -26,6 +26,10 @@ struct pixart_data {
     int32_t scroll_delta_x;
     int32_t scroll_delta_y;
 
+#ifdef CONFIG_PMW3610_SCROLL_ACCELERATION
+    int64_t last_scroll_time;
+#endif
+
 #ifdef CONFIG_PMW3610_POLLING_RATE_125_SW
     int64_t last_poll_time;
     int16_t last_x;
@@ -48,6 +52,8 @@ struct pixart_data {
 
     // for pmw3610 smart algorithm
     bool sw_smart_flag;
+
+    int64_t last_remainder_time;
 };
 
 // device config data structure
