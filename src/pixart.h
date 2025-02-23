@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-enum pixart_input_mode { MOVE = 0, SCROLL, SNIPE };
+enum pixart_input_mode { MOVE = 0, SCROLL, SNIPE, BALL_ACTION };
 
 /* device data structure */
 struct pixart_data {
@@ -25,6 +25,8 @@ struct pixart_data {
     uint32_t curr_cpi;
     int32_t scroll_delta_x;
     int32_t scroll_delta_y;
+    int32_t ball_action_delta_x;
+    int32_t ball_action_delta_y;
 
 #ifdef CONFIG_PMW3610_SCROLL_ACCELERATION
     int64_t last_scroll_time;
@@ -56,6 +58,17 @@ struct pixart_data {
     int64_t last_remainder_time;
 };
 
+// ball action config data structure
+struct ball_action_cfg {
+    size_t bindings_len;
+    struct zmk_behavior_binding *bindings;
+    uint8_t layers[ZMK_KEYMAP_LAYERS_LEN];
+    size_t layers_len;
+    uint32_t tick;
+    uint32_t wait_ms;
+    uint32_t tap_ms;
+};
+
 // device config data structure
 struct pixart_config {
     struct gpio_dt_spec irq_gpio;
@@ -65,6 +78,8 @@ struct pixart_config {
     int32_t *scroll_layers;
     size_t snipe_layers_len;
     int32_t *snipe_layers;
+    struct ball_action_cfg **ball_actions;
+    size_t ball_actions_len;
 };
 
 #ifdef __cplusplus
