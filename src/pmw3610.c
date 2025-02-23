@@ -640,6 +640,18 @@ static int pmw3610_report_data(const struct device *dev) {
 
     data->curr_mode = input_mode;
 
+    int16_t x;
+    int16_t y;
+
+#if AUTOMOUSE_LAYER > 0
+    if (input_mode == MOVE &&
+        (automouse_triggered || zmk_keymap_highest_layer_active() != AUTOMOUSE_LAYER) &&
+        (abs(x) + abs(y) > CONFIG_PMW3610_MOVEMENT_THRESHOLD)
+) {
+    activate_automouse_layer();
+}
+#endif
+
     int err = motion_burst_read(dev, buf, sizeof(buf));
     if (err) {
         return err;
@@ -673,11 +685,9 @@ static int pmw3610_report_data(const struct device *dev) {
         y = -y;
     }
 
-    // 残り値の減衰処理
     int64_t current_time = k_uptime_get();
     if (data->last_remainder_time > 0) {
         int64_t elapsed = current_time - data->last_remainder_time;
-        // 100ms経過で残り値をリセット
         if (elapsed > 100) {
             data->scroll_delta_x = 0;
             data->scroll_delta_y = 0;
@@ -740,29 +750,16 @@ static int pmw3610_report_data(const struct device *dev) {
                 int64_t delta_time = data->last_scroll_time > 0 ? 
                                     current_time - data->last_scroll_time : 0;
                 
-                // 速度を計算（有効な時間差がある場合のみ）
-                if (delta_time > 0 && delta_time < 100) {  // 100ms以上経過したら速度計算をリセット
+                if (delta_time > 0 && delta_time < 100) {
                     float speed = (float)movement / delta_time;
-                    
-                    // より積極的なシグモイド関数を使用した加速曲線
                     float base_sensitivity = (float)CONFIG_PMW3610_SCROLL_SENSITIVITY / 2.5f;
-                    
-                    // より大きな加速効果（最大10倍まで）
                     float acceleration = 1.0f + 9.0f * (1.0f / (1.0f + expf(-0.5f * (speed - 8.0f))));
-                    
-                    // 感度設定を反映
                     acceleration *= base_sensitivity;
-                    
-                    // 加速係数を適用
                     accel_x = (int32_t)(x * acceleration);
                     accel_y = (int32_t)(y * acceleration);
-                    
-                    // 小さな動きは維持するが、大きな動きは加速する
                     if (abs(x) <= 1) accel_x = x;
                     if (abs(y) <= 1) accel_y = y;
                 }
-                
-                // 時間と移動量を記録
                 data->last_scroll_time = current_time;
             #endif
 
@@ -770,21 +767,17 @@ static int pmw3610_report_data(const struct device *dev) {
             data->scroll_delta_y += accel_y;
                     
             if (abs(data->scroll_delta_y) > CONFIG_PMW3610_SCROLL_TICK) {
-                // イベント数制限
                 int event_count = abs(data->scroll_delta_y) / CONFIG_PMW3610_SCROLL_TICK;
                 const int MAX_EVENTS = 10;
                 if (event_count > MAX_EVENTS) {
                     event_count = MAX_EVENTS;
-                    // 制限された残りの値を保持
                     if (data->scroll_delta_y > 0) {
                         data->scroll_delta_y -= (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
                     } else {
                         data->scroll_delta_y += (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
                     }
-                    // 残り値の時間を記録
                     data->last_remainder_time = k_uptime_get();
                 } else {
-                    // 通常通り余りを計算
                     data->scroll_delta_y = data->scroll_delta_y % CONFIG_PMW3610_SCROLL_TICK;
                 }
                 
@@ -796,21 +789,17 @@ static int pmw3610_report_data(const struct device *dev) {
                 }
                 data->scroll_delta_x = 0;
             } else if (abs(data->scroll_delta_x) > CONFIG_PMW3610_SCROLL_TICK) {
-                // イベント数制限
                 int event_count = abs(data->scroll_delta_x) / CONFIG_PMW3610_SCROLL_TICK;
                 const int MAX_EVENTS = 10;
                 if (event_count > MAX_EVENTS) {
                     event_count = MAX_EVENTS;
-                    // 制限された残りの値を保持
                     if (data->scroll_delta_x > 0) {
                         data->scroll_delta_x -= (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
                     } else {
                         data->scroll_delta_x += (MAX_EVENTS * CONFIG_PMW3610_SCROLL_TICK);
                     }
-                    // 残り値の時間を記録
                     data->last_remainder_time = k_uptime_get();
                 } else {
-                    // 通常通り余りを計算
                     data->scroll_delta_x = data->scroll_delta_x % CONFIG_PMW3610_SCROLL_TICK;
                 }
                 
