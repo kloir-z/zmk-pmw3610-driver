@@ -169,13 +169,13 @@ config PMW3610_MOVEMENT_THRESHOLD
 
 config PMW3610_SCROLL_ACCELERATION
     bool "Enable scroll acceleration"
-    default y
+    default n
     help
       Enable acceleration for scrolling based on movement speed.
 
-config PMW3610_SCROLL_SENSITIVITY
+config PMW3610_SCROLL_ACCELERATION_SENSITIVITY
     int "Scroll sensitivity (1-10)"
-    default 2
+    default 3
     range 1 10
     depends on PMW3610_SCROLL_ACCELERATION
     help
