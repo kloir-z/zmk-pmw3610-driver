@@ -167,6 +167,20 @@ config PMW3610_MOVEMENT_THRESHOLD
         A higher value means more movement is required to activate the mouse layer.
         This helps prevent accidental activation during typing.
 
+config PMW3610_BALL_ACTION_TICK
+    int "PMW3610's required ticks to trigger a ball action"
+    default 20
+    help
+        Ball action tick value. Higher values require more movement to trigger a ball action.
+
+config PMW3610_MOVEMENT_THRESHOLD
+    int "Movement threshold for automatic mouse layer activation"
+    default 5
+    help
+        The threshold for trackball movement that triggers the automatic mouse layer.
+        A higher value means more movement is required to activate the mouse layer.
+        This helps prevent accidental activation during typing.
+
 config PMW3610_SCROLL_ACCELERATION
     bool "Enable scroll acceleration"
     default n
