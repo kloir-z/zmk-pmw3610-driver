@@ -802,7 +802,7 @@ static int pmw3610_report_data(const struct device *dev) {
 #endif
             input_report_rel(dev, INPUT_REL_X, x, false, K_FOREVER);
             input_report_rel(dev, INPUT_REL_Y, y, true, K_FOREVER);
-        } else {
+        } else if (input_mode == SCROLL) {
             int32_t accel_x, accel_y;
             calculate_scroll_acceleration(x, y, data, &accel_x, &accel_y);
             
