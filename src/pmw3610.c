@@ -811,6 +811,42 @@ static int pmw3610_report_data(const struct device *dev) {
             
             process_scroll_events(dev, data, data->scroll_delta_y, false);
             process_scroll_events(dev, data, data->scroll_delta_x, true);
+        } else if (input_mode == BALL_ACTION) {
+            data->ball_action_delta_x += x;
+            data->ball_action_delta_y += y;
+
+            const struct pixart_config *config = dev->config;
+
+            if(ball_action_idx != -1) {
+                const struct ball_action_cfg action_cfg = *config->ball_actions[ball_action_idx];
+
+                LOG_DBG("invoking ball action [%d], layer=%d", ball_action_idx, zmk_keymap_highest_layer_active());
+
+                struct zmk_behavior_binding_event event = {
+                    .position = INT32_MAX,
+                    .timestamp = k_uptime_get(),
+#if IS_ENABLED(CONFIG_ZMK_SPLIT)
+                    .source = ZMK_POSITION_STATE_CHANGE_SOURCE_LOCAL,
+#endif
+
+                };
+
+                // determine which binding to invoke
+                int idx = -1;
+                if(abs(data->ball_action_delta_x) > action_cfg.tick) {
+                    idx = data->ball_action_delta_x > 0 ? 0 : 1;
+                } else if(abs(data->ball_action_delta_y) > action_cfg.tick) {
+                    idx = data->ball_action_delta_y > 0 ? 3 : 2;
+                }
+
+                if(idx != -1) {
+                    zmk_behavior_queue_add(&event, action_cfg.bindings[idx], true, action_cfg.tap_ms);
+                    zmk_behavior_queue_add(&event, action_cfg.bindings[idx], false, action_cfg.wait_ms);
+
+                    data->ball_action_delta_x = 0;
+                    data->ball_action_delta_y = 0;
+                }
+            }
         }
     }
 
