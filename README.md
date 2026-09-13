@@ -1,3 +1,32 @@
+## このフォークについて
+
+`scroll-acceleration-feature` ブランチに、トラボスクロールの改善を入れています（本家への PR: [kumamuk-git/zmk-pmw3610-driver#4](https://github.com/kumamuk-git/zmk-pmw3610-driver/pull/4)）。
+
+- 素早く動かしたときにスクロールが途切れないよう、しきい値を超えた分を次に繰り越します
+- 動かす速さに応じてスクロール量を増やす加速機能を追加しています（任意）
+
+使う場合は `config/west.yml` の remotes に kloir-z を足し、ドライバの参照先を書き換えてください。
+
+```yml
+  remotes:
+    - name: kloir-z
+      url-base: https://github.com/kloir-z
+  projects:
+    - name: zmk-pmw3610-driver
+      remote: kloir-z
+      revision: scroll-acceleration-feature
+```
+
+加速を使う場合は `roBa_R.conf` に追加します。書かなくても繰り越しの改善は効きます。
+
+```conf
+CONFIG_PMW3610_SCROLL_ACCELERATION=y
+# 1〜10、大きいほど強く加速（既定は3）
+CONFIG_PMW3610_SCROLL_ACCELERATION_SENSITIVITY=3
+```
+
+---
+
 PMW3610 driver implementation for ZMK with at least Zephyr 3.5
 
 This work is based on [ufan's implementation](https://github.com/ufan/zmk/tree/support-trackpad) of the driver.
